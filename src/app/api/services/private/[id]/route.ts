@@ -37,10 +37,11 @@ export const PUT = async (
     }
 
     return NextResponse.json(updatedService, { status: 200 });
-  } catch (error: any) {
+    
+  } catch (error: unknown) {
  
     console.error("Erro ao atualizar serviço:", error);
-    if (error.kind === 'ObjectId') {
+    if ((error as any).kind === 'ObjectId') {
         return NextResponse.json({ error: "ID do serviço inválido." }, { status: 400 });
     }
     return NextResponse.json(
@@ -79,8 +80,14 @@ export const DELETE = async (
     }
 
     return NextResponse.json({ message: "Serviço deletado com sucesso." }, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Erro ao deletar serviço:", error);
+    
+    let errorMessage = "Erro interno ao deletar o serviço.";
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+
     return NextResponse.json({ error: "Erro interno ao deletar o serviço." }, { status: 500 });
   }
 }

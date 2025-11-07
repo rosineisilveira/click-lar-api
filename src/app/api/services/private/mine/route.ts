@@ -15,8 +15,10 @@ export async function GET(request: Request) {
     const myServices = await Service.find({ providerId: providerId });
 
     return NextResponse.json(myServices, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    
     console.error("Erro ao buscar meus serviços:", error);
+
     return NextResponse.json({ error: "Erro interno ao buscar serviços." }, { status: 500 });
   }
 }

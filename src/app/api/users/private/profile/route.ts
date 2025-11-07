@@ -3,7 +3,6 @@ import { connectDB } from "@/utils/mongodb";
 import User from "@/models/User";
 import Service from "@/models/Service";
 import { getUserFromToken } from "@/utils/getUserToken";
-import bcrypt from "bcryptjs";
 
 export async function GET(request: Request) {
   try {
@@ -72,16 +71,20 @@ export async function PUT(request: Request) {
     }
 
     return NextResponse.json(updatedUser, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) { 
     console.error("Erro ao atualizar perfil:", error);
-     
-    if (error.name === 'ValidationError') {
-      return NextResponse.json({ error: "Dados inválidos.", details: error.errors }, { status: 400 });
+
+    if (typeof error === 'object' && error !== null) {
+      
+      if ((error as any).name === 'ValidationError') {
+        return NextResponse.json({ error: "Dados inválidos.", details: (error as any).errors }, { status: 400 });
+      }
+      
+      if ((error as any).code === 11000) {
+          return NextResponse.json({ error: "O e-mail ou telefone informado já está em uso." }, { status: 409 });
+      }
     }
-     
-    if (error.code === 11000) {
-        return NextResponse.json({ error: "O e-mail ou telefone informado já está em uso." }, { status: 409 });
-    }
+    
     return NextResponse.json({ error: "Erro interno ao atualizar perfil." }, { status: 500 });
   }
 }

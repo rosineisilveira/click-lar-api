@@ -23,10 +23,14 @@ export async function DELETE(req: Request) {
     return NextResponse.json({
       message: `Usuário com id ${id} deletado com sucesso`,
     });
-  } catch (err) {
+  } catch (err: unknown) {
+    console.error("Erro ao verificar", err);
+
     return NextResponse.json(
       { error: "Erro ao deletar usuário" },
       { status: 500 }
+      
     );
+    
   }
 }

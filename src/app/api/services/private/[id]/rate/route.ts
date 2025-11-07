@@ -1,20 +1,24 @@
-import { NextResponse, NextRequest } from "next/server"; 
+import { NextResponse, NextRequest } from "next/server";
 import { connectDB } from "@/utils/mongodb";
 import Service from "@/models/Service";
-import User from "@/models/User";
 import { getUserFromToken } from "@/utils/getUserToken";
 import mongoose from "mongoose";
 
+interface IRating {
+  userId: mongoose.Types.ObjectId | string;
+  rating: number;
+}
+
 export async function POST(
-  request: NextRequest, 
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
+  console.log(`[API RATE] ROTA ACESSADA! Contexto recebido.`);
+
   try {
     const params = await context.params;
-    const rawServiceId = params.id; 
-
-    // Log para ver o ID 
-    console.log(`[API RATE] ID bruto extraído dos params: ${rawServiceId}`);
+    const rawServiceId = params.id;
+    //console.log(`[API RATE] ID bruto extraído dos params: ${rawServiceId}`);
 
     await connectDB();
     const userId = await getUserFromToken(request);
@@ -22,16 +26,15 @@ export async function POST(
       return NextResponse.json({ error: "Usuário não autenticado." }, { status: 401 });
     }
 
-    const serviceId = rawServiceId ? rawServiceId.trim() : ''; 
+    const serviceId = rawServiceId ? rawServiceId.trim() : '';
     const { rating } = await request.json();
 
-    // 4. Validar Rating
     if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
       console.error("[API RATE] Erro: Rating inválido recebido:", rating);
       return NextResponse.json({ error: "Avaliação inválida. Use um número entre 1 e 5." }, { status: 400 });
     }
-    // Log Detalhado
-    console.log("[API RATE] Validando serviceId (após trim):", `"${serviceId}"`, "| Tipo:", typeof serviceId, "| Comprimento:", serviceId.length);
+
+    //console.log("[API RATE] Validando serviceId (após trim):", `"${serviceId}"`); // Log simplificado
     if (serviceId.length !== 24 || !/^[0-9a-fA-F]{24}$/.test(serviceId) || !mongoose.Types.ObjectId.isValid(serviceId)) {
         console.error("[API RATE] Validação do ObjectId FALHOU para:", `"${serviceId}"`);
         return NextResponse.json({ error: "ID do serviço inválido ou mal formatado." }, { status: 400 });
@@ -45,9 +48,8 @@ export async function POST(
     }
     console.log("[API RATE] Serviço encontrado:", service.title);
 
-    // 7. Verificar Avaliação Existente
     const existingRatingIndex = service.ratings.findIndex(
-      (r: any) => r.userId.toString() === userId
+      (r: IRating) => r.userId.toString() === userId
     );
 
     if (existingRatingIndex > -1) {
@@ -58,15 +60,17 @@ export async function POST(
       service.ratings.push({ userId, rating });
     }
 
-    // 8. Recalcular Média e Contagem
     service.ratingsCount = service.ratings.length;
     if (service.ratingsCount > 0) {
-      const totalRating = service.ratings.reduce((sum: number, r: any) => sum + r.rating, 0);
+      
+      const totalRating = service.ratings.reduce(
+        (sum: number, r: IRating) => sum + r.rating, 0
+      );
       service.averageRating = totalRating / service.ratingsCount;
     } else {
       service.averageRating = 0;
     }
-    console.log(`[API RATE] Nova Média: ${service.averageRating}, Contagem: ${service.ratingsCount}`);
+    //console.log(`[API RATE] Nova Média: ${service.averageRating}, Contagem: ${service.ratingsCount}`);
 
     await service.save();
     console.log("[API RATE] Avaliação salva com sucesso.");
@@ -76,16 +80,26 @@ export async function POST(
         { status: 200 }
     );
 
-  } catch (error: any) {
+  
+  } catch (error: unknown) {
     console.error("[API RATE] Erro GERAL no try...catch:", error);
-    if (error.code === 11000) {
-        return NextResponse.json({ error: "Conflito ao salvar avaliação." }, { status: 409 });
+
+    
+    if (typeof error === 'object' && error !== null) {
+      
+      if ((error as any).code === 11000) {
+          return NextResponse.json({ error: "Conflito ao salvar avaliação." }, { status: 409 });
+      }
+      
+      if (error instanceof SyntaxError && (error as any).message.includes('JSON')) {
+           return NextResponse.json({ error: " Corpo da requisição inválido (não é JSON)." }, { status: 400 });
+      }
+      
+      if ((error as any).name) {
+          return NextResponse.json({ error: (error as any).name, message: (error as any).message }, { status: 500 });
+      }
     }
     
-    if (error instanceof SyntaxError && error.message.includes('JSON')) {
-         console.error("[API RATE] Erro ao parsear JSON do body:", error);
-         return NextResponse.json({ error: " Corpo da requisição inválido (não é JSON)." }, { status: 400 });
-    }
     return NextResponse.json({ error: "Erro interno ao registrar avaliação." }, { status: 500 });
   }
 }

@@ -37,8 +37,19 @@ export async function POST(req: Request) {
     return NextResponse.json(newService, { status: 201 });
   } catch (error: any) {
     console.error("Erro ao criar serviço:", error);
-    if (error.name === "ValidationError") {
-        return NextResponse.json({ error: "Dados inválidos.", details: error.errors }, { status: 400 });
+
+   if (typeof error === 'object' && error !== null) {
+    
+      if ((error as any).name === "ValidationError") {
+        return NextResponse.json(
+          { 
+            error: "Dados inválidos.", 
+            
+            details: (error as any).errors 
+          }, 
+          { status: 400 }
+        );
+      }
     }
     return NextResponse.json(
       { error: "Erro interno ao criar o serviço." },
