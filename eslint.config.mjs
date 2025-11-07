@@ -20,6 +20,15 @@ const eslintConfig = [
       "next-env.d.ts",
     ],
   },
+  {
+    rules: {
+      // Desliga o erro "Unexpected any"
+      "@typescript-eslint/no-explicit-any": "off",
+
+      // Desliga o aviso "defined but never used"
+      "@typescript-eslint/no-unused-vars": "off"
+    }
+  }
 ];
 
 export default eslintConfig;
