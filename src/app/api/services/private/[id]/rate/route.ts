@@ -46,7 +46,14 @@ export async function POST(
       console.warn("[API RATE] Serviço não encontrado com ID:", serviceId);
       return NextResponse.json({ error: "Serviço não encontrado." }, { status: 404 });
     }
-    console.log("[API RATE] Serviço encontrado:", service.title);
+    //console.log("[API RATE] Serviço encontrado:", service.title);
+
+    if (service.providerId.toString() === userId) {
+        return NextResponse.json(
+            { error: "Você não pode avaliar seu próprio serviço." },
+            { status: 403 } 
+        );
+    }
 
     const existingRatingIndex = service.ratings.findIndex(
       (r: IRating) => r.userId.toString() === userId

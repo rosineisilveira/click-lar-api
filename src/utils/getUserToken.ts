@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+
 import { jwtVerify } from "jose";
 
 export async function getUserFromToken(req: Request): Promise<string | null> {
